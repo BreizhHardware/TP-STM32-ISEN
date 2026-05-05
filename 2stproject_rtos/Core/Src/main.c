@@ -72,7 +72,7 @@ void myTask2(void *);
 void myTask1(void *p) {
 	while (1) {
 		printf("rentre dans task1: %d\r\n", compteur++);
-		vTaskDelay(2000);
+		vTaskDelay(2500);
 		LED_One ^= 0x1;
 	}
 }
