@@ -46,8 +46,13 @@
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+/*
 TaskHandle_t myTask1Handle = NULL;
 TaskHandle_t myTask2Handle = NULL;
+*/
+
+TaskHandle_t LedOneTaskHandle = NULL;
+TaskHandle_t LedTwoTaskHandle = NULL;
 
 uint8_t LED_One = 0;
 uint8_t LED_Two = 0;
@@ -62,13 +67,19 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 
 /* USER CODE BEGIN PFP */
+/*
 void myTask1(void *);
 void myTask2(void *);
+*/
+
+void LedOneTask(void *);
+void LedTwoTask(void *);
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+/*
 void myTask1(void *p) {
 	TickType_t TaskTimeStamp;
 	TickType_t DelayImeMsec = 2000;
@@ -90,6 +101,53 @@ void myTask2(void *p) {
 		LED_Two ^= 0x1;
 	}
 }
+*/
+
+void LedOneTask(void *p) {
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t xPeriod    = pdMS_TO_TICKS(10000); // Période 10s
+    const TickType_t xToggle    = pdMS_TO_TICKS(50);    // 20Hz -> 50ms
+    const uint32_t   nToggles   = 4000 / 50;            // 160 toggles sur 4s
+
+    while (1) {
+        xLastWakeTime = xTaskGetTickCount();
+
+        LED_One = 1;
+
+        for (uint32_t i = 0; i < nToggles; i++) {
+            LED_One ^= 0x1;
+            vTaskDelay(xToggle);
+        }
+
+        LED_One = 0;
+
+        vTaskDelayUntil(&xLastWakeTime, xPeriod);
+    }
+}
+
+void LedTwoTask(void *p) {
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t xPeriod    = pdMS_TO_TICKS(2000);  // Période 2s
+    const TickType_t xToggle    = pdMS_TO_TICKS(40);    // 25Hz -> 40ms
+    const uint32_t   nToggles   = 500 / 40;             // 25 toggles sur 500ms
+
+    while (1) {
+        xLastWakeTime = xTaskGetTickCount();
+
+        LED_Two = 1;
+
+        for (uint32_t i = 0; i < nToggles; i++) {
+            LED_Two ^= 0x1;
+            vTaskDelay(xToggle);
+        }
+
+        LED_Two = 0;
+
+        vTaskDelayUntil(&xLastWakeTime, xPeriod);
+    }
+}
+
+
 /* USER CODE END 0 */
 
 /**
@@ -147,8 +205,14 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+
+  /*
   xTaskCreate(myTask1, "task1", 200, (void *) NULL, 1, &myTask1Handle);
   xTaskCreate(myTask2, "task2", 200, (void *) NULL, 2, &myTask2Handle);
+  */
+
+  xTaskCreate(LedOneTask, "ledonetask", 200, (void *) NULL, 2, &LedOneTaskHandle);
+  xTaskCreate(LedTwoTask, "ledtwotask", 200, (void *) NULL, 2, &LedTwoTaskHandle);
 
   /* USER CODE END RTOS_THREADS */
 
