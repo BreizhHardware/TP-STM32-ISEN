@@ -53,9 +53,11 @@ UART_HandleTypeDef huart2;
 
 TaskHandle_t myTask1Handle = NULL;
 TaskHandle_t myTask2Handle = NULL;
+TaskHandle_t myTask3Handle = NULL;
 
 uint8_t LED_One = 0;
 uint8_t LED_Two = 0;
+uint8_t LED_Three = 0;
 
 uint8_t sharedDataFlag = up;
 
@@ -71,6 +73,7 @@ static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 void myTask1(void *);
 void myTask2(void *);
+void myTask3(void *);
 
 /* USER CODE END PFP */
 
@@ -110,6 +113,12 @@ void myTask2(void *p) {
 	}
 }
 
+void myTask3(void *p) {
+	while(1) {
+		LED_Three ^= 0x1;
+		vTaskDelay(50);
+	}
+}
 
 
 /* USER CODE END 0 */
@@ -172,6 +181,7 @@ int main(void)
 
   xTaskCreate(myTask1, "task1", 200, (void *) NULL, 0, &myTask1Handle);
   xTaskCreate(myTask2, "task2", 200, (void *) 0, 0, &myTask2Handle);
+  xTaskCreate(myTask3, "task3", 200, (void *) NULL, 0, &myTask3Handle);
 
   /* USER CODE END RTOS_THREADS */
 
