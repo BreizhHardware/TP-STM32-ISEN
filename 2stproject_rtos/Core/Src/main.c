@@ -70,10 +70,16 @@ void myTask2(void *);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 void myTask1(void *p) {
+	TickType_t TaskTimeStamp;
+	TickType_t DelayImeMsec = 2000;
+
+	TaskTimeStamp = xTaskGetTickCount();
+
+
 	while (1) {
-		printf("rentre dans task1: %d\r\n", compteur++);
-		vTaskDelay(2500);
 		LED_One ^= 0x1;
+		HAL_Delay(500);
+		vTaskDelayUntil(&TaskTimeStamp, DelayImeMsec);
 	}
 }
 
