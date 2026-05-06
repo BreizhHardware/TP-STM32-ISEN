@@ -79,7 +79,7 @@ void myTask1(void *p) {
 	while (1) {
 		LED_One ^= 0x1;
 		HAL_Delay(500);
-		vTaskDelayUntil(&TaskTimeStamp, DelayImeMsec);
+		//vTaskDelayUntil(&TaskTimeStamp, DelayImeMsec);
 	}
 }
 
@@ -147,8 +147,8 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
-  xTaskCreate(myTask1, "task1", 200, (void *) NULL, 0, &myTask1Handle);
-  xTaskCreate(myTask2, "task2", 200, (void *) NULL, 0, &myTask2Handle);
+  xTaskCreate(myTask1, "task1", 200, (void *) NULL, 1, &myTask1Handle);
+  xTaskCreate(myTask2, "task2", 200, (void *) NULL, 2, &myTask2Handle);
 
   /* USER CODE END RTOS_THREADS */
 
