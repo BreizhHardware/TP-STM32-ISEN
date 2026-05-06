@@ -25,6 +25,7 @@
 #include "stdio.h"
 #include "freertos.h"
 #include "task.h"
+#include "semphr.h"
 
 /* USER CODE END Includes */
 
@@ -54,6 +55,8 @@ UART_HandleTypeDef huart2;
 TaskHandle_t myTask1Handle = NULL;
 TaskHandle_t myTask2Handle = NULL;
 TaskHandle_t myTask3Handle = NULL;
+
+SemaphoreHandle_t CriticalResourceSemaphoreHandle;
 
 uint8_t LED_One = 0;
 uint8_t LED_Two = 0;
@@ -85,11 +88,11 @@ void myTask1(void *p) {
 	while (1) {
 		LED_One = 1;
 		if (up == sharedDataFlag) {
-			taskENTER_CRITICAL();
+			xSemaphoreTake(CriticalResourceSemaphoreHandle, portMAX_DELAY);
 			sharedDataFlag = down;
 			for (int i = 0; i < 1150000; i++);
 			sharedDataFlag = up;
-			taskEXIT_CRITICAL();
+			xSemaphoreGive(CriticalResourceSemaphoreHandle);
 		}
 		LED_One = 0;
 		vTaskDelay(500);
@@ -102,11 +105,11 @@ void myTask2(void *p) {
 	while (1) {
 		LED_Two = 1;
 		if (up == sharedDataFlag) {
-			taskENTER_CRITICAL();
+			xSemaphoreTake(CriticalResourceSemaphoreHandle, portMAX_DELAY);
 			sharedDataFlag = down;
 			for (int i = 0; i < 1150000; i++);
 			sharedDataFlag = up;
-			taskEXIT_CRITICAL();
+			xSemaphoreGive(CriticalResourceSemaphoreHandle);
 		}
 		LED_Two = 0;
 		vTaskDelay(100);
@@ -162,6 +165,9 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
+  CriticalResourceSemaphoreHandle = xSemaphoreCreateBinary();
+  xSemaphoreGive(CriticalResourceSemaphoreHandle);
+
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
