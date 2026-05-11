@@ -26,6 +26,7 @@
 #include "freertos.h"
 #include "task.h"
 #include "stdio.h"
+#include "semphr.h"
 
 /* USER CODE END Includes */
 
@@ -63,6 +64,12 @@ UART_HandleTypeDef huart2;
 
 QueueHandle_t File_tapis_arrivee;
 
+QueueHandle_t File_depart_national;
+QueueHandle_t File_depart_international;
+QueueHandle_t File_tapis_relecture;
+
+SemaphoreHandle_t Sem_affichage;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -98,15 +105,107 @@ void tache_arrivee( void *pvParameters )
 	while(1)
 	{
 		colis = (num_colis<<3) + liste_colis[num_colis % (sizeof(liste_colis)/sizeof(unsigned int))];
-		xQueueSendToBack(File_tapis_arrivee, &colis, TIMEOUT_FILE_TAPIS_ARRIVEE); // Il faudra gérer le débordement et afficher un message d'erreur
+		//xQueueSendToBack(File_tapis_arrivee, &colis, TIMEOUT_FILE_TAPIS_ARRIVEE); // Il faudra gérer le débordement et afficher un message d'erreur
+		if (xQueueSendToBack(File_tapis_arrivee, &colis, TIMEOUT_FILE_TAPIS_ARRIVEE) != pdPASS)
+		    affiche_message("ERREUR tache_arrivee : debordement File_tapis_arrivee", colis);
 
 		vTaskDelay(liste_delai[num_colis % (sizeof(liste_colis)/sizeof(unsigned int))]/portTICK_RATE_MS); // Attente entre deux colis en ms
-		printf("Le colis No %d est depose sur le tapis roulant et il porte l'etiquette %d\n",num_colis, colis);	// Il faudra gérer l'affichage comme une ressource partagée
+		//printf("Le colis No %d est depose sur le tapis roulant et il porte l'etiquette %d\n",num_colis, colis);	// Il faudra gérer l'affichage comme une ressource partagée
+		affiche_message("Tache_arrivee", colis);
 		num_colis++;
   }
 	vTaskDelete( NULL );
 }
 
+void affiche_message(char *texte, unsigned int colis)
+{
+    uint32_t compteur = colis >> 3;
+    uint32_t b2       = (colis >> 2) & 0x1;
+    uint32_t b1       = (colis >> 1) & 0x1;
+    uint32_t b0       = colis & 0x1;
+
+    xSemaphoreTake(Sem_affichage, portMAX_DELAY);
+    printf("%s : compteur=%lu B2=%lu B1=%lu B0=%lu\n", texte, compteur, b2, b1, b0);
+    xSemaphoreGive(Sem_affichage);
+}
+
+void tache_lecture_rapide(void *pvParameters)
+{
+    uint32_t colis;
+    while (1)
+    {
+        if (xQueueReceive(File_tapis_arrivee, &colis, portMAX_DELAY) == pdPASS)
+        {
+            uint32_t b1 = (colis >> 1) & 0x1;
+            uint32_t b0 = colis & 0x1;
+
+            if (b1 == 1)
+            {
+                if (xQueueSendToBack(File_tapis_relecture, &colis, TIMEOUT_FILE_TAPIS_RELECTURE) != pdPASS)
+                    affiche_message("ERREUR lect_rapide : debordement File_tapis_relecture", colis);
+                else
+                    affiche_message("Tache_lecture_rapide -> relecture", colis);
+            }
+            else if (b0 == 1)
+            {
+                if (xQueueSendToBack(File_depart_international, &colis, TIMEOUT_FILE_TAPIS_DEPART) != pdPASS)
+                    affiche_message("ERREUR lect_rapide : debordement File_depart_international", colis);
+                else
+                    affiche_message("Tache_lecture_rapide -> international", colis);
+            }
+            else
+            {
+                if (xQueueSendToBack(File_depart_national, &colis, TIMEOUT_FILE_TAPIS_DEPART) != pdPASS)
+                    affiche_message("ERREUR lect_rapide : debordement File_depart_national", colis);
+                else
+                    affiche_message("Tache_lecture_rapide -> national", colis);
+            }
+        }
+    }
+    vTaskDelete(NULL);
+}
+
+void tache_depart_national(void *pvParameters)
+{
+    uint32_t colis;
+    while (1)
+    {
+        if (xQueueReceive(File_depart_national, &colis, portMAX_DELAY) == pdPASS)
+            affiche_message("Tache_depart_national", colis);
+    }
+    vTaskDelete(NULL);
+}
+
+void tache_depart_international(void *pvParameters)
+{
+    uint32_t colis;
+    while (1)
+    {
+        if (xQueueReceive(File_depart_international, &colis, portMAX_DELAY) == pdPASS)
+            affiche_message("Tache_depart_international", colis);
+    }
+    vTaskDelete(NULL);
+}
+
+void tache_relecture(void *pvParameters)
+{
+    uint32_t colis;
+    while (1)
+    {
+        if (xQueueReceive(File_tapis_relecture, &colis, portMAX_DELAY) == pdPASS)
+        {
+            affiche_message("Tache_relecture (avant)", colis);
+            vTaskDelay(DELAI_RELECTURE / portTICK_RATE_MS);
+            colis &= ~(1 << 1); // B1 = 0
+            colis |=  (1 << 2); // B2 = 1
+            affiche_message("Tache_relecture (apres)", colis);
+
+            if (xQueueSendToFront(File_tapis_arrivee, &colis, TIMEOUT_FILE_TAPIS_ARRIVEE) != pdPASS)
+                affiche_message("ERREUR tache_relecture : debordement File_tapis_arrivee", colis);
+        }
+    }
+    vTaskDelete(NULL);
+}
 
 /* USER CODE END 0 */
 
@@ -149,6 +248,8 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
+  Sem_affichage = xSemaphoreCreateMutex();
+
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
@@ -158,6 +259,10 @@ int main(void)
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   File_tapis_arrivee = xQueueCreate(x, sizeof(unsigned int));
+
+  File_depart_national = xQueueCreate(y, sizeof(unsigned int));
+  File_depart_international = xQueueCreate(y, sizeof(unsigned int));
+  File_tapis_relecture = xQueueCreate(z, sizeof(unsigned int));
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -170,8 +275,13 @@ int main(void)
 							"Tache arrivee",			// Nom de la tâche, facilite le debug
 							configMINIMAL_STACK_SIZE, 	// Taille de pile (mots)
 							NULL, 						// Pas de paramètres pour la tâche
-							1, 							// Niveau de priorité 1 pour la tâche (0 étant la plus faible)
+							2, 							// Niveau de priorité 1 pour la tâche (0 étant la plus faible)
 							NULL );
+
+	xTaskCreate(tache_lecture_rapide, "Tache lect rapide", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+	xTaskCreate(tache_depart_national, "Tache dep national", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+	xTaskCreate(tache_depart_international,"Tache dep internat", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+	xTaskCreate(tache_relecture, "Tache relecture", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
   /* USER CODE END RTOS_THREADS */
 
@@ -298,6 +408,16 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+int _write(int file, char *ptr, int len) {
+	(void)file;
+	int DataIdx;
+
+	for (DataIdx = 0; DataIdx < len; DataIdx++) {
+		ITM_SendChar (*ptr++);
+	}
+
+	return len;
+}
 
 /* USER CODE END 4 */
 
