@@ -88,9 +88,16 @@ maVariable:
 	.word	2
 */
 
+/* 3.2 Contruction of a modulo 10 counter
 count:
 	.word 0
+*/
 
+/* 3.3 How to design a for-loop
+*/
+
+sum:
+	.byte 0
 
 /********************************************************************************
 *                                                                               *
@@ -208,6 +215,7 @@ LoopForever:
 */
 
 
+/* 3.2 Contruction of a modulo 10 counter
 ldr r0, =count // r0 = adresse de count
 
 LoopForever:
@@ -220,7 +228,26 @@ LoopForever:
 Save:
 	str r1, [r0] // count = r1
 	b LoopForever
+*/
 
+/* 3.3 How to design a for-loop ?
+*/
+
+ldr   r0, =sum         // r0 = adresse de sum
+
+Start:
+    movs  r2, #0
+    strb  r2, [r0]         // sum = 0
+    movs  r1, #20          // X = 20
+
+LoopForever:
+    cmp   r1, #1           // compare X à 1
+    blt   Start            // X < 1 retour à sum = 0
+    ldrb  r2, [r0]         // r2 = sum
+    adds  r2, r2, r1       // sum = sum + X
+    strb  r2, [r0]         // écrit sum
+    subs  r1, r1, #1       // X = X - 1
+    b     LoopForever
     
 .size	Reset_Handler, .-Reset_Handler
 
