@@ -207,6 +207,7 @@ LoopForever:
     b LoopForever
 */
 
+
 ldr r0, =count // r0 = adresse de count
 
 LoopForever:
@@ -219,6 +220,7 @@ LoopForever:
 Save:
 	str r1, [r0] // count = r1
 	b LoopForever
+
     
 .size	Reset_Handler, .-Reset_Handler
 
