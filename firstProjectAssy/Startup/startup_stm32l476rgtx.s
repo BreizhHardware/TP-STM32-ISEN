@@ -83,9 +83,13 @@ defined in linker script */
 /*******************************************************************************/
 .section .data
 
+/* 3.1 Introduction
 maVariable:
 	.word	2
+*/
 
+count:
+	.word 0
 
 
 /********************************************************************************
@@ -191,6 +195,7 @@ LoopFillZerobss:
 
 main:
 
+/* 3.1 Introduction
 ldr r0, =maVariable // recupère l'adresse de la variable r0
 ldr r1, [r0] // mets la valeur pointée par r0 dans r1
 
@@ -200,6 +205,20 @@ LoopForever:
 	subs r1, #1 // soustrait 1 à r1 en mettant à jour le registre xPSR
 
     b LoopForever
+*/
+
+ldr r0, =count // r0 = adresse de count
+
+LoopForever:
+	ldr r1, [r0] // r1 = count
+	adds r1, #1 // On ajoute 1
+	cmp r1, #10 // On regarde si r1 = 10
+	blt Save // Si r1 < 10 on sauvegarde la valeur
+	movs r1, #0 // Sinon on retourne a 0
+
+Save:
+	str r1, [r0] // count = r1
+	b LoopForever
     
 .size	Reset_Handler, .-Reset_Handler
 
