@@ -94,8 +94,12 @@ count:
 */
 
 /* 3.3 How to design a for-loop
+sum:
+	.byte 0
 */
 
+/* 3.4 Create and call subroutines
+*/
 sum:
 	.byte 0
 
@@ -186,6 +190,22 @@ LoopFillZerobss:
 *                                                                               *
 /*******************************************************************************/
 
+/* 3.4 Create and call subroutines
+*/
+calculate_sum:
+	movs r1, #0 // sum = 0
+				// X = A : X est directement R0
+
+LoopSum:
+	cmp r0, #1 // compare X à 1
+	blt EndSum // X < 1: fin du calcul
+	adds r1, r1, r0 // sum = sum + X
+	subs r0, r0, #1 // X = X - 1
+	b LoopSum // retour au test
+
+EndSum:
+	mov r0, r1 // résultat renvoyé dans R0
+	bx lr // retour à l'appelant
 
 /********************************************************************************
 *                                                                               *
@@ -231,8 +251,6 @@ Save:
 */
 
 /* 3.3 How to design a for-loop ?
-*/
-
 ldr   r0, =sum         // r0 = adresse de sum
 
 Start:
@@ -248,7 +266,18 @@ LoopForever:
     strb  r2, [r0]         // écrit sum
     subs  r1, r1, #1       // X = X - 1
     b     LoopForever
-    
+*/
+
+/* 3.4 Create and call subroutines
+*/
+ldr r2, =sum // r2 = adresse de la variable sum
+
+Start:
+	movs r0, #22 // A = 22
+	bl calculate_sum // appel du sous-programme
+	strb r0, [r2] // sum = R0
+	b Start // on recommence
+
 .size	Reset_Handler, .-Reset_Handler
 
 /********************************************************************************
