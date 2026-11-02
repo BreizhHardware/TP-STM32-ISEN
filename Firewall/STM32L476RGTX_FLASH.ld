@@ -47,7 +47,9 @@ MEMORY
 {
   RAM    (xrw)    : ORIGIN = 0x20000000,   LENGTH = 96K
   RAM2    (xrw)    : ORIGIN = 0x10000000,   LENGTH = 32K
-  FLASH    (rx)    : ORIGIN = 0x8000000,   LENGTH = 1024K
+  FLASH    (rx)    : ORIGIN = 0x8000000,   LENGTH = 1008K
+  SecureFlash (rx)  : ORIGIN = 0x080FC004, LENGTH = 0x3FFC
+  SecureSRAM  (xrw) : ORIGIN = 0x2000FE00, LENGTH = 512
 }
 
 /* Sections */
@@ -87,6 +89,19 @@ SECTIONS
     *(.rodata*)        /* .rodata* sections (constants, strings, etc.) */
     . = ALIGN(4);
   } >FLASH
+  
+  .mysection :
+  {
+    . = ALIGN(4);
+    *(.mysection*)
+    . = ALIGN(4);
+  } > SecureFlash
+
+  .securedata (NOLOAD) :
+  {
+    *(.securedata)
+    *(.securedata*)
+  } > SecureSRAM
 
   .ARM.extab (READONLY) : /* The "READONLY" keyword is only supported in GCC11 and later, remove it if using GCC10 or earlier. */
   {

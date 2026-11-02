@@ -43,6 +43,7 @@
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+__attribute__((section(".securedata"))) uint32_t number_calls;
 
 /* USER CODE END PV */
 
@@ -56,6 +57,26 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void __attribute__((section(".mysection"))) Protected_function(void);
+void __attribute__((section(".mysection"), noinline)) toggleLED(void);
+
+void __attribute__((section(".mysection"))) Protected_function(void)
+{
+    __HAL_FIREWALL_PREARM_DISABLE();
+    toggleLED();
+    __asm__ (
+        "ldr r4, =number_calls\n"
+        "ldr r5, [r4]\n"
+        "add r5, #1\n"
+        "str r5, [r4]\n"
+        "ldr r6, =0xDEADBEEF");
+    __HAL_FIREWALL_PREARM_ENABLE();
+}
+
+void __attribute__((section(".mysection"), noinline)) toggleLED(void)
+{
+	GPIOA->ODR ^= GPIO_PIN_5;
+}
 
 /* USER CODE END 0 */
 
@@ -90,6 +111,21 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
+  __HAL_RCC_SYSCFG_CLK_ENABLE();
+  number_calls = 0;
+
+  FIREWALL_InitTypeDef fw_init = {0};
+  fw_init.CodeSegmentStartAddress    = 0x080FC000;
+  fw_init.CodeSegmentLength          = 0x2000;
+  fw_init.NonVDataSegmentStartAddress = 0x080FE000;
+  fw_init.NonVDataSegmentLength      = 0x200;
+  fw_init.VDataSegmentStartAddress   = 0x2000FE00;
+  fw_init.VDataSegmentLength         = 0x200;
+  fw_init.VolatileDataExecution      = FIREWALL_VOLATILEDATA_NOT_EXECUTABLE;
+  fw_init.VolatileDataShared         = FIREWALL_VOLATILEDATA_NOT_SHARED;
+
+  if (HAL_FIREWALL_Config(&fw_init) != HAL_OK) Error_Handler();
+  HAL_FIREWALL_EnableFirewall();
 
   /* USER CODE END 2 */
 
@@ -97,6 +133,12 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  __disable_irq();
+	  Protected_function();
+	  //volatile uint32_t x = number_calls;
+	  //toggleLED();
+	  __enable_irq();
+	  HAL_Delay(500);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
